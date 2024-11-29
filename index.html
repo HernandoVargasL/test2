@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruleta Americana - Registro de Resultados y Probabilidades</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        input, button {
+            margin-bottom: 10px;
+        }
+        .resultados {
+            margin-top: 20px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin: 5px 0;
+        }
+        #ruleta {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border: 5px solid #333;
+            border-radius: 50%;
+            margin: 30px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .numero {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            border: 2px solid #333;
+        }
+        .resultado {
+            background-color: #ff6347; /* Color rojo para los números que salieron */
+            color: white;
+        }
+        .probabilidades {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Ruleta Americana - Registro de Resultados y Probabilidades</h1>
+
+<label for="numero">Ingresa el número de la ruleta (0-36 o 00):</label>
+<input type="text" id="numero" placeholder="Ejemplo: 0, 36, 00">
+<button onclick="agregarResultado()">Agregar Resultado</button>
+<button onclick="simularGiro()">Simular Giro</button>
+
+<div id="ruleta"></div>
+
+<div class="resultados">
+    <h2>Últimos 12 Resultados:</h2>
+    <ul id="ultimosResultados"></ul>
+</div>
+
+<div class="resultados">
+    <h2>Probabilidades por número:</h2>
+    <ul id="probabilidadesList"></ul>
+</div>
+
+<div id="numeroMasProbable" style="margin-top: 20px; font-size: 18px;"></div>
+
+<script>
+// Clase para manejar los resultados y las probabilidades de la ruleta
+class Ruleta {
+    constructor() {
+        this.resultados = [];
+        this.totalTiros = 0;
+        this.probabilidades = {};
+        
+        // Inicializamos todos los números con la misma probabilidad (1)
+        for (let i = 0; i <= 36; i++) {
+            this.probabilidades[i] = 1;
+        }
+        this.probabilidades["00"] = 1;
+    }
+
+    agregarResultado(numero) {
+        if (numero === "00" || (numero >= 0 && numero <= 36)) {
+            this.resultados.push(numero);  // Almacenar como cadena
+            if (this.resultados.length > 12) {
+                this.resultados.shift(); // Mantener solo los 12 últimos resultados
+            }
+            this.totalTiros++;
+            this.calcularProbabilidades();
+        } else {
+            alert("Número inválido. Debe estar entre 0 y 36 o 00.");
+        }
+    }
+
+    calcularProbabilidades() {
+        let conteo = {};
+        this.resultados.forEach(numero => {
+            conteo[numero] = (conteo[numero] || 0) + 1;
+        });
+
+        for (let i = 0; i <= 36; i++) {
+            let numero = i.toString();
+            if (conteo[numero]) {
+                this.probabilidades[numero] = 1 / (conteo[numero] + 1);
+            } else {
+                this.probabilidades[numero] = 1;
+            }
+        }
+
+        if (conteo["00"]) {
+            this.probabilidades["00"] = 1 / (conteo["00"] + 1);
+        } else {
+            this.probabilidades["00"] = 1;
+        }
+    }
+
+    mostrarProbabilidades() {
+        let probabilidades = [];
+        for (let i = 0; i <= 36; i++) {
+            probabilidades.push({ numero: i, probabilidad: this.probabilidades[i] });
+        }
+        probabilidades.push({ numero: "00", probabilidad: this.probabilidades["00"] });
+        return probabilidades;
+    }
+
+    obtenerNumeroMasProbable() {
+        let maxProbabilidad = -1;
+        let numeroMasProbable = null;
+        for (let numero in this.probabilidades) {
+            if (this.probabilidades[numero] > maxProbabilidad) {
+                maxProbabilidad = this.probabilidades[numero];
+                numeroMasProbable = numero;
+            }
+        }
+        return numeroMasProbable;
+    }
+}
+
+let ruleta = new Ruleta();
+
+// Función para agregar un resultado
+function agregarResultado() {
+    const inputNumero = document.getElementById("numero").value.trim();
+    
+    if (inputNumero === "") {
+        alert("Por favor, ingresa un número.");
+        return;
+    }
+
+    if (!isNumeroValido(inputNumero)) {
+        alert("Número inválido. Debe estar entre 0 y 36 o 00.");
+        return;
+    }
+
+    ruleta.agregarResultado(inputNumero);
+    document.getElementById("numero").value = "";
+    mostrarProbabilidades();
+    mostrarNumeroMasProbable();
+    mostrarRuleta();
+    mostrarUltimosResultados();  // Mostrar los últimos resultados
+}
+
+// Mostrar los últimos 12 resultados
+function mostrarUltimosResultados() {
+    const listaUltimosResultados = document.getElementById("ultimosResultados");
+    listaUltimosResultados.innerHTML = ""; // Limpiar lista actual
+
+    ruleta.resultados.slice().reverse().forEach(numero => {
+        const li = document.createElement("li");
+        li.textContent = `Número: ${numero}`;
+        listaUltimosResultados.appendChild(li);
+    });
+}
+
+function isNumeroValido(numero) {
+    const regex = /^(0|[1-9]|1[0-9]|2[0-9]|3[0-6]|00)$/;
+    return regex.test(numero);
+}
+
+function mostrarProbabilidades() {
+    const listaProbabilidades = document.getElementById("probabilidadesList");
+    listaProbabilidades.innerHTML = "";
+
+    const probabilidades = ruleta.mostrarProbabilidades();
+    probabilidades.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = `Número ${item.numero}: ${(item.probabilidad * 100).toFixed(2)}%`;
+        listaProbabilidades.appendChild(li);
+    });
+}
+
+function mostrarNumeroMasProbable() {
+    const numeroMasProbable = ruleta.obtenerNumeroMasProbable();
+    const probabilidad = (ruleta.probabilidades[numeroMasProbable] * 100).toFixed(2);
+    const mensaje = `El número más probable que salga ahora es: ${numeroMasProbable} con una probabilidad de ${probabilidad}%`;
+    document.getElementById("numeroMasProbable").textContent = mensaje;
+}
+
+// Orden correcto de la ruleta americana
+const ordenRuletaAmericana = [
+    "0", "2", "14", "35", "23", "4", "16", "33", "21", "6", "18", "31", "19", "8", "12", "29", "25", "10", "27", "00", 
+    "1", "13", "36", "24", "3", "15", "34", "22", "5", "17", "32", "20", "7", "11", "30", "26", "9", "28", "00"
+];
+
+function mostrarRuleta() {
+    const ruletaContainer = document.getElementById("ruleta");
+    ruletaContainer.innerHTML = "";
+
+    const anguloIncremento = 360 / ordenRuletaAmericana.length;
+    ordenRuletaAmericana.forEach((numero, index) => {
+        const angle = angleInDegrees(anguloIncremento * index);
+        const x = Math.cos(angle) * 140 + 150;
+        const y = Math.sin(angle) * 140 + 150;
+
+        const numeroElemento = document.createElement("div");
+        numeroElemento.classList.add("numero");
+        numeroElemento.textContent = numero;
+
+        if (ruleta.resultados.includes(numero)) {
+            numeroElemento.classList.add("resultado");
+        }
+
+        numeroElemento.style.left = `${x}px`;
+        numeroElemento.style.top = `${y}px`;
+        ruletaContainer.appendChild(numeroElemento);
+    });
+}
+
+function angleInDegrees(degrees) {
+    return degrees * (Math.PI / 180);
+}
+
+// Función para simular el giro de la ruleta
+function simularGiro() {
+    if (ruleta.resultados.length < 5) {
+        alert("Se necesitan al menos 5 resultados para simular el giro.");
+        return;
+    }
+
+    // Parámetros de simulación de la ruleta
+    const circunferenciaRuleta = 267.5;  // en cm
+    const radioRuleta = circunferenciaRuleta / (2 * Math.PI); // Radio en cm
+    const velocidadRuedaRPM = 8; // Velocidad de la rueda en revoluciones por minuto (RPM)
+    const velocidadBolaRPM = 28; // Velocidad de la bola en revoluciones por minuto (RPM)
+    const friccionRueda = 0.01;  // Fricción de la rueda
+    const friccionBola = 0.02;   // Fricción de la bola
+
+    let velocidadRueda = velocidadRuedaRPM * (2 * Math.PI) / 60;  // rad/s
+    let velocidadBola = velocidadBolaRPM * (2 * Math.PI) / 60; // rad/s
+
+    let anguloActualRueda = 0;  // Ángulo de la rueda en radianes
+    let anguloActualBola = Math.random() * (2 * Math.PI); // Ángulo aleatorio inicial para la bola
+
+    const intervalo = setInterval(() => {
+        if (velocidadBola > 0 || velocidadRueda > 0) {
+            anguloActualRueda += velocidadRueda;
+            anguloActualBola += velocidadBola;
+
+            // Aplicar fricción
+            velocidadBola -= friccionBola;
+            velocidadRueda -= friccionRueda;
+
+            // Mostrar ruleta
+            mostrarRuleta();
+
+            // Ajustar el ángulo de la rueda
+            anguloActualRueda %= 2 * Math.PI;
+            anguloActualBola %= 2 * Math.PI;
+
+            if (velocidadBola <= 0) {
+                clearInterval(intervalo);
+                const indiceNumero = Math.floor((anguloActualBola / (2 * Math.PI)) * 37);
+                const numeroFinal = ordenRuletaAmericana[indiceNumero];
+                alert(`La bola ha caído en el número: ${numeroFinal}`);
+                ruleta.agregarResultado(numeroFinal);
+            }
+        }
+    }, 50);
+}
+</script>
+
+</body>
+</html>
